@@ -3,7 +3,6 @@ from datetime import datetime
 import uuid
 
 # --- 1. DATABASE FUNCTIONS (Handling the CSVs) ---
-
 def load_db():
     """Loads the CSV files into memory as Pandas DataFrames."""
     try:
@@ -11,7 +10,7 @@ def load_db():
         emp_df = pd.read_csv('employee_accounts.csv')
         hist_df = pd.read_csv('transaction_history.csv')
         return corp_df, emp_df, hist_df
-    except FileNotFoundError as e:
+    except FileNotFoundError:
         return None, None, None
 
 def save_db(corp_df, emp_df, hist_df):
@@ -21,7 +20,6 @@ def save_db(corp_df, emp_df, hist_df):
     hist_df.to_csv('transaction_history.csv', index=False)
 
 # --- 2. VALIDATION FUNCTIONS ---
-
 def verify_liquidity(corp_df, company_id, amount_needed):
     """Checks if the company has enough cash to process the batch."""
     company_data = corp_df[corp_df['CompanyID'] == company_id]
@@ -37,16 +35,8 @@ def verify_liquidity(corp_df, company_id, amount_needed):
         return False, f"Insufficient Funds. Balance: ${current_balance:,.2f}, Needed: ${amount_needed:,.2f}"
 
 # --- 3. THE MASTER PAYROLL ALGORITHM ---
-
 def process_payroll(company_id, uploaded_file):
-    """
-    Executes the One-to-Many transaction.
-    1. Validates liquidity.
-    2. Deducts from Corporate Vault.
-    3. Calculates Taxes (15%).
-    4. Deposits Net Pay to Employees.
-    5. Logs the transactions to the ledger.
-    """
+    """Executes the One-to-Many transaction."""
     # Load the databases
     corp_df, emp_df, hist_df = load_db()
     if corp_df is None:
@@ -62,10 +52,10 @@ def process_payroll(company_id, uploaded_file):
     total_gross = payroll_df['GrossSalary'].sum()
     total_tax = total_gross * 0.15  # Flat 15% corporate tax rate
     
-    # Step 1: Validate Liquidity (Does the company have enough money?)
+    # Step 1: Validate Liquidity
     is_liquid, msg = verify_liquidity(corp_df, company_id, total_gross)
     if not is_liquid:
-        return False, msg # Fails validation, stops the process, returns error
+        return False, msg
 
     # Step 2: Deduct Total Gross from the Corporate Account
     corp_df.loc[corp_df['CompanyID'] == company_id, 'Balance'] -= total_gross
@@ -74,12 +64,11 @@ def process_payroll(company_id, uploaded_file):
     for index, row in payroll_df.iterrows():
         emp_id = row['EmpID']
         gross_pay = row['GrossSalary']
-        net_pay = gross_pay * 0.85 # (100% - 15% tax)
+        net_pay = gross_pay * 0.85 
         
-        # Add net pay to the specific employee's balance
         emp_df.loc[emp_df['EmpID'] == emp_id, 'Balance'] += net_pay
 
-    # Step 5: Log the transactions to the Immutable Ledger (History)
+    # Step 5: Log the transactions
     today_date = datetime.now().strftime('%Y-%m-%d')
     
     new_transactions = pd.DataFrame([
@@ -87,10 +76,9 @@ def process_payroll(company_id, uploaded_file):
         {'TxnID': f"TXN-{uuid.uuid4().hex[:6].upper()}", 'Date': today_date, 'CompanyID': company_id, 'Type': 'Tax_Withholding', 'Amount': -total_tax}
     ])
     
-    # Combine old history with new transactions
     hist_df = pd.concat([hist_df, new_transactions], ignore_index=True)
 
-    # Step 6: Save everything back to the CSV files permanently
+    # Step 6: Save everything
     save_db(corp_df, emp_df, hist_df)
 
     return True, f"Successfully processed payroll for {len(payroll_df)} employees. Total Gross: ${total_gross:,.2f}"
