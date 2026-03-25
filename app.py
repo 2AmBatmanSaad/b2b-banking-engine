@@ -1,11 +1,20 @@
 import streamlit as st
 import pandas as pd
-import bank_logic # This imports the engine you built!
+import bank_logic
 
 # --- UI CONFIGURATION ---
-st.set_page_config(page_title="Corporate Treasury", page_icon="🏦", layout="wide")
+st.set_page_config(page_title="Wayne Treasury", page_icon="🏦", layout="wide")
 
-st.title("🏦 Automated Treasury & Payroll Engine")
+# Added a high-end sidebar for the presentation
+with st.sidebar:
+    st.title("🏦 Wayne Enterprises")
+    st.write("Global Treasury & Payroll")
+    st.divider()
+    st.write("👨‍💻 **System Admin:** Saad")
+    st.write("🟢 **Status:** Secure Connection")
+    st.write("🔒 **Encryption:** AES-256")
+
+st.title("⚡ Automated Treasury & Payroll Engine")
 st.write("B2B Banking Dashboard for **Wayne Enterprises (CORP-001)**")
 
 # --- LOAD LIVE DATABASE ---
@@ -25,7 +34,7 @@ if corp_df is not None:
 
     # --- LEFT COLUMN: ACTION (PAYROLL) ---
     with col1:
-        st.write("### ⚡ Execute Bulk Payroll")
+        st.write("### 📤 Execute Bulk Payroll")
         st.info("Upload the monthly CSV containing EmpID and GrossSalary.")
         uploaded_file = st.file_uploader("Upload Payroll CSV", type=["csv"])
 
@@ -61,8 +70,13 @@ if corp_df is not None:
     # --- BOTTOM SECTION: LIVE EMPLOYEE LEDGER ---
     st.write("### 👥 Employee Ledger (Live Updates)")
     company_employees = emp_df[emp_df['CompanyID'] == 'CORP-001']
-    # Show the data table, hiding the internal CompanyID column for a cleaner look
-    st.dataframe(company_employees[['EmpID', 'EmpName', 'Balance']], use_container_width=True)
+    
+    # Upgraded data table to hide the ugly index numbers
+    st.dataframe(
+        company_employees[['EmpID', 'EmpName', 'Balance']], 
+        use_container_width=True,
+        hide_index=True
+    )
 
 else:
     st.error("🚨 Database disconnected. Please ensure CSV files are uploaded to GitHub.")
